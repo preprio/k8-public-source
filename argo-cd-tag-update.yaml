@@ -1,0 +1,23 @@
+name: "Update ArgoCD tag"
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+      
+  deploy:
+  
+    needs: build
+
+    runs-on: ubuntu-latest
+    
+    container: registry.services.k8s.true.nl/library/helm-push:2.0.0
+
+    steps:
+        
+        - name: Argo Tag Update
+          run: |
+            export ARGOCD_SERVER=${{ secrets.ARGOCD_HOSTNAME }}
+            export ARGOCD_AUTH_TOKEN="${{ secrets.ARGOCD_TOKEN }}"
+            argocd app set "{{APP_NAME}}" -p image.tag=4.0
