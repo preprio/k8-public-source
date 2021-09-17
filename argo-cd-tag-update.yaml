@@ -20,4 +20,4 @@ jobs:
           run: |
             export ARGOCD_SERVER=${{ secrets.ARGOCD_HOSTNAME }}
             export ARGOCD_AUTH_TOKEN="${{ secrets.ARGOCD_TOKEN }}"
-            argocd app set "{{APP_NAME}}" -p image.tag=4.0
+            argocd app set "acc-marketing-prepr-io" -p image.tag=${{ github.sha }}
