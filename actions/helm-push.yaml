@@ -31,5 +31,5 @@ jobs:
           cd charts
           for i in `ls -d */ | cut -f1 -d'/'`
           do
-            helm push $i k8s-true
+            helm cm-push $i k8s-true
           done        
