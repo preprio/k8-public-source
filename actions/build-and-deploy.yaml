@@ -1,0 +1,79 @@
+name: "Build & Deploy Production"
+
+on:
+  release:
+    types: [released]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+     - name: Check Out Repo
+       uses: actions/checkout@v2
+       
+     - name: Add HTTP basic auth credentials for GIT
+       run: echo '${{ secrets.PAT_GITHUB }}' > $GITHUB_WORKSPACE/auth.json
+
+     - name: SignIn Docker
+       run: echo "${{ secrets.HARBOR_PASSWORD }}" | docker login ${{ secrets.HARBOR_HOSTNAME }} -u "${{ secrets.HARBOR_USERNAME }}" --password-stdin
+
+     # Set {{folder}}, {{project}} to push to the r
+
+     - name: Docker Meta Sign Release
+       id: meta
+       uses: docker/metadata-action@v3
+       with:
+         # Basename of the Docker Image
+         images: |
+           registry.services.k8s.true.nl/{{folder}}/{{project}}
+         # Generate Docker tags based on the following events/attributes (default)
+         tags: |
+           type=schedule
+           type=ref,event=branch
+           type=ref,event=pr
+           type=semver,pattern={{version}}
+           type=semver,pattern={{major}}.{{minor}}
+           type=semver,pattern={{major}}
+           type=sha
+          
+     - name: Set up Docker Buildx
+       id: buildx
+       uses: docker/setup-buildx-action@v1
+     
+     - name: Build and push
+       id: docker_build
+       uses: docker/build-push-action@v2
+       with:
+         context: ./
+         file: ./Dockerfile
+         push: true
+         tags: ${{ steps.meta.outputs.tags }}
+         labels: ${{ steps.meta.outputs.labels }}
+
+     - name: Remove auth.json file
+       run: rm -f $GITHUB_WORKSPACE/auth.json
+
+  deploy:
+
+     needs: build
+
+     runs-on: ubuntu-latest
+
+     container: registry.services.k8s.true.nl/library/helm-push:2.0.0
+
+     steps:
+     
+       - name: Extract Release from Ref
+         id: releaseversion
+         run: echo ::set-output name=VERSION::$(echo ${{ github.ref }} | cut -d / -f 3)
+
+      # SET {{appName}} tot the Argo Project name
+
+       - name: Argo Tag Update
+         run: |
+           export ARGOCD_SERVER=${{ secrets.ARGOCD_HOSTNAME }}
+           export ARGOCD_AUTH_TOKEN="${{ secrets.ARGOCD_TOKEN }}"
+           argocd app set "{{appName}}" -p image.tag=${{ steps.releaseversion.outputs.VERSION }}
