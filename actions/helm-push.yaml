@@ -1,4 +1,4 @@
-name: "Lint & Push to Harbor registry"
+name: "Push to Harbor registry"
 
 # {{chartName}} should be replaced with the folder of the chart.
 
