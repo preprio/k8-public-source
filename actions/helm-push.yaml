@@ -1,8 +1,12 @@
-name: "Push to Harbor registry"
+name: "Lint & Push to Harbor registry"
+
+# {{chartName}} should be replaced with the folder of the chart.
 
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'charts/{{chartName}}/Chart.yaml'
 
 jobs:
 
